@@ -1,5 +1,8 @@
 {
-    "editor.formatOnSave": true,
+    "[dart]": {
+        "editor.formatOnSave": false,
+    },
+    "editor.formatOnSave": false,
     "dart.lineLength": 200,
     "files.associations": {
         "*.arb": "json"

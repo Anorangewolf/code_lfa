@@ -12,6 +12,7 @@ import 'package:xterm/xterm.dart';
 /// 收集 .tar.gz 中的硬链接映射
 /// key 为链接文件在归档中的路径（entry.name）
 /// value 为链接所指向的目标路径（header.linkName）
+///
 /// Collect hard link mappings in .tar.gz
 /// key is the path of the link file in the archive (entry.name)
 /// value is the target path of the link (header.linkName)
@@ -36,6 +37,7 @@ Future<Map<String, String>> getHardLinkMap(String tarGzPath) async {
 /// 使用 archive_io + TarFile 收集 .tar.gz 中的硬链接映射
 /// key 为链接文件在归档中的路径（tf.filename）
 /// value 为链接所指向的目标路径（tf.nameOfLinkedFile）
+///
 /// Collect hard link mappings in .tar.gz
 /// key is the path of the link file in the archive (tf.filename)
 /// value is the target path of the link (tf.nameOfLinkedFile)
@@ -45,7 +47,7 @@ Future<Map<String, String>> getHardLinkMapByArchive(String tarGzPath) async {
   try {
     // 解压至内存
     final memOut = OutputMemoryStream();
-    GZipDecoder().decodeStream(input, memOut);
+    const GZipDecoder().decodeStream(input, memOut);
     final tarBytes = memOut.getBytes();
 
     // 逐条读取 TarFile，保留 typeFlag/linkName 等信息
@@ -67,7 +69,7 @@ Future<Map<String, String>> getHardLinkMapByArchive(String tarGzPath) async {
       }
     }
   } finally {
-    input.close();
+    await input.close();
   }
   return result;
 }
@@ -75,23 +77,28 @@ Future<Map<String, String>> getHardLinkMapByArchive(String tarGzPath) async {
 MethodChannel _channel = const MethodChannel('vscode_channel');
 
 /// 打开 WebView
+///
 /// Opens the WebView
-void openWebView() {
-  _channel.invokeMethod('open_webview');
+Future<void> openWebView() async {
+  await _channel.invokeMethod('open_webview');
 }
 
 /// 获取 Apk So 库路径
+///
 /// Gets the path of the Apk So library
-Future<String> getLibPath() async {
-  return await _channel.invokeMethod('lib_path');
+Future<String?> getLibPath() async {
+  return _channel.invokeMethod('lib_path');
 }
 
+/// 根据指定的 shell 和窗口大小创建并启动一个伪终端
+///
+/// Create and start a PTY based on the specified shell and window size
 Pty createPTY({
   String? shell,
   int rows = 25,
   int columns = 80,
 }) {
-  Map<String, String> envir = Map.from(Platform.environment);
+  final envir = Map<String, String>.from(Platform.environment);
   envir['HOME'] = RuntimeEnvir.homePath;
   // proot-distro install need
   envir['TERMUX_PREFIX'] = RuntimeEnvir.usrPath;
@@ -111,25 +118,40 @@ Pty createPTY({
   );
 }
 
+/// 终端进度条扩展
+/// 
+/// Extension for the terminal progress bar
 extension TerminalExt on Terminal {
+  /// 在终端中写入进度信息
+  /// 
+  /// Write progress information to the terminal
   void writeProgress(String data) {
     write('\x1b[31m- $data\x1b[0m\n\r');
   }
 }
 
+/// PTY扩展方法
+/// 
+/// Extension method for PTY
 extension PTYExt on Pty {
+  /// 向PTY写入字符串数据
+  /// 
+  /// Write data to PTY
   void writeString(String data) {
     write(Uint8List.fromList(utf8.encode(data)));
   }
 
+  /// 定义并加载shell函数到PTY中
+  /// 
+  /// Define and load the shell function to the PTY
   Future<void> defineFunction(String function) async {
     Log.i('define function start');
-    Completer defineFunctionLock = Completer();
-    Directory tmpDir = Directory(RuntimeEnvir.tmpPath);
+    final defineFunctionLock = Completer<dynamic>();
+    final tmpDir = Directory(RuntimeEnvir.tmpPath);
     await tmpDir.create(recursive: true);
-    String shortHash = hashCode.toRadixString(16).substring(0, 4);
-    File shellFile = File('${tmpDir.path}/shell$shortHash');
-    String patchFunction = '$function\n'
+    final shortHash = hashCode.toRadixString(16).substring(0, 4);
+    final shellFile = File('${tmpDir.path}/shell$shortHash');
+    final patchFunction = '$function\n'
         r'''
     #printf "\033[A"
     #printf "\033[2K"
@@ -143,7 +165,7 @@ extension PTYExt on Pty {
     // writeString('printf "\\033[?1049h"\n');
     writeString('source ${shellFile.path} &&');
     writeString('rm -rf ${shellFile.path} \n');
-    //terminal?.buffer.eraseLine();
+    // terminal?.buffer.eraseLine();
     // await Future.delayed(const Duration(milliseconds: 100));
     // writeString('printf "\\033[?1049l"\n');
     await defineFunctionLock.future;

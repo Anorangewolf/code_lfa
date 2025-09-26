@@ -2,7 +2,15 @@ import 'dart:ui';
 
 import 'package:xterm/xterm.dart';
 
+/// Manjaro Linux 风格的终端主题
+///
+/// 该类继承自 [TerminalTheme]，提供了 Manjaro Linux 风格的终端配色方案。
+/// 包含了光标颜色、选择区域颜色、前景色、背景色以及标准16色终端颜色。
+/// 此外还包含了搜索高亮相关的颜色配置。
+///
+/// 颜色值基于 Manjaro Linux 默认终端配色方案。
 class ManjaroTerminalTheme extends TerminalTheme {
+  /// 创建 Manjaro Linux 风格的终端主题
   ManjaroTerminalTheme({
     super.cursor = const Color(0xaaf6f5f4),
     super.selection = const Color(0XAAAEAFAD),

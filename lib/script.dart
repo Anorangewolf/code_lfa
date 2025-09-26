@@ -1,13 +1,27 @@
+import 'package:code_lfa/config.dart';
+import 'package:code_lfa/generated/l10n.dart';
 import 'package:global_repository/global_repository.dart';
-import 'config.dart';
-import 'generated/l10n.dart';
 
 // proot distro，ubuntu path
+/// proot-distro安装路径
+///
+/// Path to proot-distro installation
 String prootDistroPath = '${RuntimeEnvir.usrPath}/var/lib/proot-distro';
+
+/// Ubuntu根文件系统路径
+///
+/// Path to Ubuntu root filesystem
 String ubuntuPath = '$prootDistroPath/installed-rootfs/ubuntu';
+
+/// Ubuntu发行版名称
+///
+/// Ubuntu distribution name
 String ubuntuName = Config.ubuntuFileName.replaceAll(RegExp('-pd.*'), '');
 
-String common = '''
+/// 通用环境变量和函数定义
+///
+/// Common environment variables and functions
+final String common = '''
 export TMPDIR=${RuntimeEnvir.tmpPath}
 export BIN=${RuntimeEnvir.binPath}
 export UBUNTU_PATH=$ubuntuPath
@@ -38,8 +52,9 @@ bump_progress(){
 }
 ''';
 
-// 切换到清华源
-// Switch to Tsinghua source
+/// 切换到清华源
+///
+/// Switch to Tsinghua source
 String changeUbuntuNobleSource = r'''
 change_ubuntu_source(){
   cat <<EOF > $UBUNTU_PATH/etc/apt/sources.list
@@ -65,7 +80,10 @@ EOF
 }
 ''';
 
-/// 安装ubuntu的shell
+// 安装ubuntu的shell
+/// 生成 code-server 配置
+///
+/// generate code-server config
 String genCodeConfig = r'''
 gen_code_server_config(){
   mkdir -p $UBUNTU_PATH/root/.config/code-server 2>/dev/null
@@ -78,6 +96,11 @@ gen_code_server_config(){
 }
 ''';
 
+/// 安装ubuntu
+/// 直接用 busybox tar 来解压，然后 hardlink 目前是针对这个 code-server 版本写死的，
+/// 后续可能会解析 tar tvf 的结果，再动态拷贝硬链接的文件，
+///
+/// install ubuntu
 String installUbuntu = r'''
 install_ubuntu(){
   mkdir -p $UBUNTU_PATH 2>/dev/null
@@ -103,8 +126,9 @@ install_ubuntu(){
 }
 ''';
 
-// 安装 proot-distro 的脚本
-// install proot-distro script
+/// 安装 proot-distro 的脚本
+///
+/// install proot-distro script
 String installProotDistro = r'''
 install_proot_distro(){
   proot_distro_path=`which proot-distro`
@@ -120,6 +144,11 @@ install_proot_distro(){
 }
 ''';
 
+/// 修复 code-server 目录下 node_modules 目录下硬链接的错误
+///
+/// fix the error of hard link in node_modules directory of code-server
+/// 
+/// [@Deprecated] Use genFixCodeServerHardLinkShell instead
 @Deprecated('Use genFixCodeServerHardLinkShell instead')
 String fixCodeServerHardLink = r'''
 fix_code_server_hard_link(){
@@ -139,18 +168,26 @@ fix_code_server_hard_link(){
 }
 ''';
 
+/// 生成修复code-server硬链接问题的shell脚本
+///
+/// Generate shell script to fix code-server hard link issues
+///
+/// @param map 参数映射表 parameter map
+///
+/// @return 生成的shell脚本 generated shell script
 String genFixCodeServerHardLinkShell(Map<String, String> map) {
-  final buf = StringBuffer();
-  buf.writeln(r'fix_code_server_hard_link(){');
-  buf.writeln(r'  cd $UBUNTU_PATH/opt');
-  map.forEach((key, value) {
-    buf.writeln('  cp $value $key');
-  });
-  buf.writeln('}');
+  final buf = StringBuffer()
+    ..writeln('fix_code_server_hard_link(){')
+    ..writeln(r'  cd $UBUNTU_PATH/opt')
+    ..writeAll(map.entries.map((e) => '  cp ${e.value} ${e.key}\n'))
+    ..writeln('}');
   return buf.toString();
 }
 
 // TODO(Lin): 用 ESC 7 8 来实现，不然在手机上仍然会打印出很多行
+/// 安装VS Code服务器的脚本
+///
+/// Script to install VS Code server
 String installVSCodeServer = r'''
 install_vs_code(){
   if [ ! -d "$UBUNTU_PATH/opt/code-server-$CSVERSION-linux-arm64" ];then
@@ -166,35 +203,43 @@ install_vs_code(){
 }
 ''';
 
+/// 启动 code-server
+///
+/// start code-server
 String loginUbuntu = r'''
 login_ubuntu(){
   bash $BIN/proot-distro login --bind /storage/emulated/0:/sdcard/ ubuntu --isolated  -- /opt/code-server-$CSVERSION-linux-arm64/bin/code-server
 }
 ''';
 
-String commonScript = '''
-$common
-$changeUbuntuNobleSource
-$installVSCodeServer
-$genCodeConfig
-$installUbuntu
-$loginUbuntu
-$installProotDistro
-clear_lines
-start_vs_code(){
-  install_proot_distro
-  # return
-  sleep 1
-  bump_progress
-  install_ubuntu
-  sleep 1
-  bump_progress
-  install_vs_code
-  sleep 1
-  bump_progress
-  gen_code_server_config
-  sleep 1
-  bump_progress
-  login_ubuntu
-}
-''';
+/// 组合所有脚本的公共部分
+///
+/// Combined common parts of all scripts
+String commonScript = _buffer.toString();
+
+final _buffer = StringBuffer()
+  ..writeln(common)
+  ..writeln(changeUbuntuNobleSource)
+  ..writeln(installVSCodeServer)
+  ..writeln(genCodeConfig)
+  ..writeln(installUbuntu)
+  ..writeln(loginUbuntu)
+  ..writeln(installProotDistro)
+  ..writeln('''
+  clear_lines
+  start_vs_code(){
+    install_proot_distro
+    # return
+    sleep 1
+    bump_progress
+    install_ubuntu
+    sleep 1
+    bump_progress
+    install_vs_code
+    sleep 1
+    bump_progress
+    gen_code_server_config
+    sleep 1
+    bump_progress
+    login_ubuntu
+  }''');
