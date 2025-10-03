@@ -21,7 +21,8 @@ class TerminalPage extends StatefulWidget {
 
 /// 终端页面状态类，管理终端视图的显示和交互逻辑
 ///
-/// Terminal page state class, manages the display and interaction logic of terminal view
+/// Terminal page state class, manages the display and interaction logic of 
+/// terminal view
 ///
 /// 主要功能包括:
 /// - 使用GetX管理终端控制器状态

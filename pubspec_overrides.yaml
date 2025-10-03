@@ -1,7 +1,0 @@
-dependency_overrides:
-  settings: 
-    path: C:\Users\39673\codefa_utils\settings
-  global_repository: 
-    path: C:\Users\39673\codefa_utils\global_repository
-  behavior_api: 
-    path: C:\Users\39673\codefa_utils\behavior_api
