@@ -1,9 +1,11 @@
 import java.util.Properties
 import java.io.FileInputStream
+import com.android.build.api.variant.AndroidComponentsExtension
 
 plugins {
     id("com.android.application")
     id("kotlin-android")
+    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
 
@@ -24,13 +26,15 @@ android {
     signingConfigs {
         create("release") {
             val keystorePropertiesFile = rootProject.file("key.properties")
-            val keystoreProperties = Properties()
-            keystoreProperties.load(FileInputStream(keystorePropertiesFile))
-            
-            keyAlias = keystoreProperties.getProperty("keyAlias")
-            keyPassword = keystoreProperties.getProperty("keyPassword")
-            storeFile = file(keystoreProperties.getProperty("storeFile"))
-            storePassword = keystoreProperties.getProperty("storePassword")
+            if (keystorePropertiesFile.exists()) {
+                val keystoreProperties = Properties()
+                keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+            }
         }
     }
 
@@ -42,6 +46,10 @@ android {
         versionName = flutter.versionName
     }
 
+        lintOptions {
+        disable("InvalidPackage")
+    }
+
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("release")
@@ -49,7 +57,7 @@ android {
             isShrinkResources = true
         }
         debug {
-            signingConfig = signingConfigs.getByName("release")
+            signingConfig = signingConfigs.getByName("debug")
             isMinifyEnabled = false
             isShrinkResources = false
         }
@@ -60,9 +68,13 @@ android {
             jniLibs.srcDirs("src/main/jniLibs")
         }
     }
+}
 
-    lintOptions {
-        disable("InvalidPackage")
+androidComponents {
+    onVariants { variant ->
+        variant.outputs.forEach { output ->
+            output.versionCode.set(flutter.versionCode.toInt())
+        }
     }
 }
 
@@ -72,4 +84,5 @@ flutter {
 
 dependencies {
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
+    // implementation fileTree(include: ['*.jar', '*aar'], dir: 'libs')
 }
